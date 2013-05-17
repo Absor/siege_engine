@@ -1,0 +1,6 @@
+name: siege_engine
+version: 0.1.0
+author: Heikki Haapala <hhaapala@gmail.com>
+description: Game engine
+dev_dependencies:
+  unittest: 0.5.7
