@@ -58,6 +58,16 @@ void world_test() {
       world.process();
       expect(world.containsEntity(1), isFalse);
     });
+    test("can get inactive entity by id.", () {
+      Entity entity = world.createEntity(1233);
+      expect(world.getEntityById(1233), equals(entity));
+    });
+    test("can get active entity by id.", () {
+      Entity entity = world.createEntity(1233);
+      world.activateEntity(1233);
+      world.process();
+      expect(world.getEntityById(1233), equals(entity));
+    });
   });
   group("World systems:", () {
     World world;
@@ -65,6 +75,7 @@ void world_test() {
     setUp(() {
       world = new World();
       system = new MockSystem();
+      system.when(callsTo('get priority')).alwaysReturn(1);
       system.when(callsTo('get enabled')).alwaysReturn(true);
     });
     test("can add a system.", () {
@@ -72,6 +83,7 @@ void world_test() {
     });
     test("can process systems.", () {
       System system2 = new MockSystem();
+      system2.when(callsTo('get priority')).alwaysReturn(2);
       system2.when(callsTo('get enabled')).alwaysReturn(true);
       world.addSystem(system);
       world.addSystem(system2);
@@ -111,6 +123,7 @@ void world_test() {
     });
     test("doesn't process disabled systems.", () {
       System system2 = new MockSystem();
+      system2.when(callsTo('get priority')).alwaysReturn(2);
       system2.when(callsTo('get enabled')).alwaysReturn(false);
       world.addSystem(system2);
       world.addSystem(system);
@@ -119,7 +132,7 @@ void world_test() {
       system2.getLogs(callsTo('process')).verify(neverHappened);
       system.getLogs(callsTo('process')).verify(happenedExactly(2));
     });
-    test("system gets changed entities when processing (only once).", () {
+    test("system gets deactivation + activation from changed entities.", () {
       Entity entity = world.createEntity(1);
       world.activateEntity(1);
       world.addSystem(system);
@@ -127,7 +140,50 @@ void world_test() {
       entity.addComponent(new MockComponent());
       world.process();
       world.process();
-      system.getLogs(callsTo('entityChange')).verify(happenedOnce);
+      system.getLogs(callsTo('entityDeactivation')).verify(happenedOnce);
+      system.getLogs(callsTo('entityActivation')).verify(happenedExactly(2));
+    });
+    test("can get a list of systems.", () {
+      world.addSystem(system);
+      world.process(0);
+      expect(world.getAllSystems().length, equals(1));
+      expect(world.getAllSystems().first, equals(system));
+    });
+    test("systems are kept in priority order.", () {
+      world.addSystem(system);
+      System system2 = new MockSystem();
+      system2.when(callsTo('get priority')).alwaysReturn(-3);
+      system2.when(callsTo('get enabled')).alwaysReturn(false);
+      world.addSystem(system2);
+      System system3 = new MockSystem();
+      system3.when(callsTo('get priority')).alwaysReturn(10);
+      system3.when(callsTo('get enabled')).alwaysReturn(false);
+      world.addSystem(system3);
+      world.process(0);
+      expect(world.getAllSystems()[0].priority, equals(-3));
+      expect(world.getAllSystems()[1].priority, equals(1));
+      expect(world.getAllSystems()[2].priority, equals(10));
+    });
+    test("can remove a system.", () {
+      world.addSystem(system);
+      world.process(0);
+      world.removeSystem(system);
+      world.process(0);
+      expect(world.getAllSystems().length, equals(0));
+    });
+    test("system gets an attach call when added.", () {
+      world.addSystem(system);
+      world.process(0);
+      system.getLogs(callsTo('attachWorld')).verify(happenedOnce);
+      LogEntry entry = system.getLogs(callsTo('attachWorld')).first;
+      expect(entry.args.first, equals(world));
+    });
+    test("system gets a detach call when removed.", () {
+      world.addSystem(system);
+      world.process(0);
+      world.removeSystem(system);
+      world.process(0);
+      system.getLogs(callsTo('detachWorld')).verify(happenedOnce);
     });
   });
 }

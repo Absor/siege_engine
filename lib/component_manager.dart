@@ -2,18 +2,12 @@ part of siege_engine;
 
 class ComponentManager {
   
+  World _world;
   Map<Type, Map<dynamic, Component>> _componentsByType;
-  Set<dynamic> _changedEntities;
   
-  ComponentManager() {
+  ComponentManager(this._world) {
     _componentsByType = new LinkedHashMap<Type, Map<dynamic, Component>>();
-    _changedEntities = new LinkedHashSet<dynamic>();
   }
-  
-  /**
-   * Returns a list of entity ids that have had components added or removed.
-   */
-  Set<dynamic> get changedEntities => _changedEntities;
   
   /**
    * Returns [true] if given entity id has a component 
@@ -28,11 +22,12 @@ class ComponentManager {
    * Overwrites old [Component] of the same type if any.
    */
   void addComponentToEntity(dynamic entityId, Component component) {
+    if (!_world.containsEntity(entityId)) return;
     if (!_componentsByType.containsKey(component.runtimeType)) {
       _componentsByType[component.runtimeType] = new HashMap<dynamic, Component>();
     }
     _componentsByType[component.runtimeType][entityId] = component;
-    _changedEntities.add(entityId);
+    _informWorld(entityId);
   }
   
   /**
@@ -42,7 +37,7 @@ class ComponentManager {
     if (!_componentsByType.containsKey(componentType)) return;
     if (!_componentsByType[componentType].containsKey(entityId)) return;
     _componentsByType[componentType].remove(entityId);
-    _changedEntities.add(entityId);
+    _informWorld(entityId);
   }
   
   /**
@@ -55,12 +50,31 @@ class ComponentManager {
     return _componentsByType[componentType][entityId];
   }
   
+  /**
+   * Returns all [Component]s of the given id or an empty
+   * [List] if entity has no [Components].
+   */
   List<Component> getAllComponentsFromEntity(dynamic entityId) {
-    
+    List<Component> components = new List<Component>();
+    for (Map<dynamic, Component> componentsOfType in _componentsByType.values) {
+      if (componentsOfType.containsKey(entityId)) components.add(componentsOfType[entityId]);
+    }
+    return components;
   }
   
+  /**
+   * Removes all [Component]s from the given entity id.
+   * Informs [World] with deactivate and activate events.
+   */
   void removeAllComponentsFromEntity(dynamic entityId, {bool withEvent : true}) {
-    
-    if (withEvent) _changedEntities.add(entityId);
+    for (Map<dynamic, Component> components in _componentsByType.values) {
+      components.remove(entityId);
+    }
+    if (withEvent) _informWorld(entityId);
+  }
+  
+  void _informWorld(dynamic entityId) {
+    _world.deactivateEntity(entityId);
+    _world.activateEntity(entityId);
   }
 }

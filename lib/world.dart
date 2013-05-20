@@ -9,9 +9,16 @@ class World {
   Queue<WorldEvent> _systemEvents;
   ComponentManager _cm;
   
-  World() : this.withComponentManager(new ComponentManager());
+  World() {
+    _cm = new ComponentManager(this);
+    _initPrivate();
+  }
   
   World.withComponentManager(this._cm) {
+    _initPrivate();
+  }
+  
+  void _initPrivate() {
     _inactiveEntities = new LinkedHashMap<dynamic, Entity>();
     _activeEntities = new LinkedHashMap<dynamic, Entity>();
     _systems = new List<System>();
@@ -39,14 +46,24 @@ class World {
       _activeEntities.containsKey(id);
   
   /**
+   * Returns [Entity] with given id or [null]
+   * if no [Entity] with given id has been created. 
+   */
+  Entity getEntityById(dynamic id) {
+    if (_activeEntities.containsKey(id)) return _activeEntities[id];
+    if (_inactiveEntities.containsKey(id)) return _inactiveEntities[id];
+    return null;
+  }
+  
+  /**
    * Queues an activate [WorldEvent] that will be
    * resolved with next [process] call.
    */
   void activateEntity(dynamic id) {
-    _entityEvents.addLast(new WorldEvent(_activateEntity, id));
+    _entityEvents.addLast(new WorldEvent(_activateEntityBroadcast, id));
   }
   
-  void _activateEntity(dynamic id) {
+  void _activateEntityBroadcast(dynamic id) {
     if (!_inactiveEntities.containsKey(id)) return;
     Entity entity = _inactiveEntities.remove(id);
     _activeEntities[id] = entity;
@@ -72,14 +89,14 @@ class World {
   bool isEntityActive(dynamic id) => _activeEntities.containsKey(id);
   
   /**
-   * Queues a deactivate [WorldEvent] that will be
+   * Queues a deactivate [Entity] [WorldEvent] that will be
    * resolved with next [process] call.
    */
   void deactivateEntity(dynamic id) {
-    _entityEvents.addLast(new WorldEvent(_deactivateEntity, id));
+    _entityEvents.addLast(new WorldEvent(_deactivateEntityBroadcast, id));
   }
   
-  void _deactivateEntity(dynamic id) {
+  void _deactivateEntityBroadcast(dynamic id) {
     if (!_activeEntities.containsKey(id)) return;
     Entity entity = _activeEntities.remove(id);
     _inactiveEntities[id] = entity;
@@ -95,51 +112,60 @@ class World {
    * Event also removes [Component]s from [Entity].
    */
   void destroyEntity(dynamic id) {
-    _entityEvents.addLast(new WorldEvent(_destroyEntity, id));
+    _entityEvents.addLast(new WorldEvent(_destroyEntityBroadcast, id));
   }
   
-  void _destroyEntity(dynamic id) {
-    _deactivateEntity(id);
+  void _destroyEntityBroadcast(dynamic id) {
+    _deactivateEntityBroadcast(id);
     Entity entity = _inactiveEntities.remove(id);
     if (entity == null) return;
-    // TODO remove all components
-    //entity.removeAllComponents();
-    // _cm.removeAllComponentsFromEntity(id);
+    entity.removeAllComponents();
   }
   
   /**
-   * Adds a [System] to this world.
+   * Queues an add [System] [WorldEvent] that will be
+   * resolved with next [process] call.
    */
   void addSystem(System system) {
     _systemEvents.addLast(new WorldEvent(_addSystem, system));
   }
   
   void _addSystem(System system) {
-    for (Entity entity in _activeEntities) {
+    for (Entity entity in _activeEntities.values) {
       system.entityActivation(entity);
     }
     system.attachWorld(this);
     _systems.add(system);
-    // TODO sort by priority
+    _systems.sort((system1, system2) => system1.priority - system2.priority);
   }
   
-  // TODO remove and getAllSystems
+  /**
+   * Queues a remove [System] [WorldEvent] that will be
+   * resolved with next [process] call.
+   */
+  void removeSystem(System system) {
+    _systemEvents.addLast(new WorldEvent(_removeSystem, system));
+  }
+  
+  void _removeSystem(System system) {
+    if (!_systems.remove(system)) return;
+    for (Entity entity in _activeEntities.values) {
+      system.entityDeactivation(entity);
+    }
+    system.detachWorld();
+  }
+  
+  // TODO remove and getAllSystems, remember detach + tests
+  
+  List<System> getAllSystems() {
+    return _systems;
+  }
   
   /**
    * Resolves [WorldEvent]s and processes all [System]s.
    * Forwards given timeDelta to [System]s or 0 if it is [null].
    */
   void process([num timeDelta = 0]) {
-    
-    // TODO move to world events?
-    for (dynamic entityId in _cm.changedEntities) {
-      Entity entity = _activeEntities[entityId];
-      if (entity == null) continue;
-      for (System system in _systems) {
-        system.entityChange(entity);
-      }
-    }
-    _cm.changedEntities.clear();
     
     while(!_entityEvents.isEmpty) {
       _entityEvents.removeFirst().resolve();

@@ -15,8 +15,7 @@ class Entity {
   
   Component getComponent(Type type) => _cm.getComponentFromEntity(id, type);
   
-  // TODO
   List<Component> getAllComponents() => _cm.getAllComponentsFromEntity(id);
   
-  void removeAllComponents() => _cm.removeAllComponentFromEntity(id);
+  void removeAllComponents() => _cm.removeAllComponentsFromEntity(id);
 }
