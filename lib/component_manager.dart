@@ -74,6 +74,7 @@ class ComponentManager {
   }
   
   void _informWorld(dynamic entityId) {
+    if(!_world.isEntityActive(entityId)) return;
     _world.deactivateEntity(entityId);
     _world.activateEntity(entityId);
   }

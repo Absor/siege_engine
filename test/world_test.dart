@@ -185,5 +185,14 @@ void world_test() {
       world.process(0);
       system.getLogs(callsTo('detachWorld')).verify(happenedOnce);
     });
+    test("system doesn't get information about inactive updated entities.", () {
+      world.addSystem(system);
+      world.process(0);
+      Entity entity = world.createEntity(1);
+      entity.addComponent(new MockComponent());
+      world.process(0);
+      system.getLogs(callsTo('entityDeactivation')).verify(neverHappened);
+      system.getLogs(callsTo('entityActivation')).verify(neverHappened);
+    });
   });
 }

@@ -154,9 +154,10 @@ class World {
     }
     system.detachWorld();
   }
-  
-  // TODO remove and getAllSystems, remember detach + tests
-  
+    
+  /**
+   * Returns a [List] of all [System]s.
+   */
   List<System> getAllSystems() {
     return _systems;
   }
