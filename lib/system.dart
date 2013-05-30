@@ -17,7 +17,7 @@ abstract class System {
    * Called by [World] when enabled returns [true] and
    * [World]'s [process] has been called.
    */
-  void process(num timeDelta);
+  void process(var broadcastParam);
   
   /**
    * Called when [System] is added to [World] and

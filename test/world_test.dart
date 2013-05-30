@@ -55,7 +55,7 @@ void world_test() {
       world.createEntity(1);
       expect(world.containsEntity(1), isTrue);
       world.destroyEntity(1);
-      world.process();
+      world.process(0);
       expect(world.containsEntity(1), isFalse);
     });
     test("can get inactive entity by id.", () {
@@ -65,7 +65,7 @@ void world_test() {
     test("can get active entity by id.", () {
       Entity entity = world.createEntity(1233);
       world.activateEntity(1233);
-      world.process();
+      world.process(0);
       expect(world.getEntityById(1233), equals(entity));
     });
   });
@@ -99,7 +99,7 @@ void world_test() {
     });
     test("calling process with no time defaults time to zero.", () {
       world.addSystem(system);
-      world.process();
+      world.process(0);
       LogEntry entry = system.getLogs(callsTo('process')).logs.first;
       expect(entry.args.first, equals(0));
     });
@@ -107,18 +107,18 @@ void world_test() {
       world.createEntity(1);
       world.activateEntity(1);
       world.addSystem(system);
-      world.process();
-      world.process();
+      world.process(0);
+      world.process(0);
       system.getLogs(callsTo('entityActivation')).verify(happenedOnce);
     });
     test("system gets deactivated entities when processing (only once).", () {
       world.createEntity(1);
       world.activateEntity(1);
       world.addSystem(system);
-      world.process();
+      world.process(0);
       world.deactivateEntity(1);
-      world.process();
-      world.process();
+      world.process(0);
+      world.process(0);
       system.getLogs(callsTo('entityDeactivation')).verify(happenedOnce);
     });
     test("doesn't process disabled systems.", () {
@@ -127,8 +127,8 @@ void world_test() {
       system2.when(callsTo('get enabled')).alwaysReturn(false);
       world.addSystem(system2);
       world.addSystem(system);
-      world.process();
-      world.process();
+      world.process(0);
+      world.process(0);
       system2.getLogs(callsTo('process')).verify(neverHappened);
       system.getLogs(callsTo('process')).verify(happenedExactly(2));
     });
@@ -136,10 +136,10 @@ void world_test() {
       Entity entity = world.createEntity(1);
       world.activateEntity(1);
       world.addSystem(system);
-      world.process();
+      world.process(0);
       entity.addComponent(new MockComponent());
-      world.process();
-      world.process();
+      world.process(0);
+      world.process(0);
       system.getLogs(callsTo('entityDeactivation')).verify(happenedOnce);
       system.getLogs(callsTo('entityActivation')).verify(happenedExactly(2));
     });

@@ -164,9 +164,9 @@ class World {
   
   /**
    * Resolves [WorldEvent]s and processes all [System]s.
-   * Forwards given timeDelta to [System]s or 0 if it is [null].
+   * Forwards given broadcast parameters.
    */
-  void process([num timeDelta = 0]) {
+  void process(var broadcastParam) {
     
     while(!_entityEvents.isEmpty) {
       _entityEvents.removeFirst().resolve();
@@ -177,7 +177,7 @@ class World {
     }
     
     for (System system in _systems) {
-      if (system.enabled) system.process(timeDelta);
+      if (system.enabled) system.process(broadcastParam);
     }
   }
 }
